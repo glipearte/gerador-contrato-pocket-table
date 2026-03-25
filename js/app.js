@@ -4,8 +4,8 @@
 
 // ─── Configurações globais ─────────────────────
 let appConfig = {
-  pix: '',
-  telefone: '(85) 99999-0000',
+  pix: '778.802.773-15',
+  telefone: '(85) 98685-3750',
   valorBasico: 280,
   valorLuxo: 350,
   enderecoEmpresa: 'Fortaleza - CE',
