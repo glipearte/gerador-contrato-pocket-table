@@ -8,28 +8,35 @@ let contratoEditandoId = null;
 let contratosData = [];
 
 // ─── Itens de reposição por tipo ─────────────
-const ITENS_REPOSICAO = {
-  BASICO: [
-    { id: 'mesa',       label: 'Mesa desmontável',           valor: 350 },
-    { id: 'painel',     label: 'Painel de encaixe',          valor: 80  },
-    { id: 'capa',       label: 'Capa de tecido / disco PVC', valor: 70  },
-    { id: 'doceiras',   label: 'Doceiras (4 unidades)',       valor: 100 },
-    { id: 'boleira',    label: 'Boleira',                    valor: 80  },
-    { id: 'vaso',       label: 'Vaso',                       valor: 60  },
-    { id: 'arranjo',    label: 'Arranjo de flores',          valor: 90  },
-    { id: 'placa',      label: 'Placa PVC adesivado',        valor: 60  },
-  ],
-  LUXO: [
-    { id: 'mesa',       label: 'Mesa desmontável',           valor: 350 },
-    { id: 'painel',     label: 'Painel de encaixe',          valor: 80  },
-    { id: 'capa',       label: 'Capa temática',              valor: 70  },
-    { id: 'boleira',    label: 'Boleira de cerâmica/metal',  valor: 180 },
-    { id: 'vaso',       label: 'Vaso de cerâmica/vidro',     valor: 180 },
-    { id: 'doceiras',   label: 'Suportes de cerâmica',       valor: 150 },
-    { id: 'arranjo',    label: 'Arranjo de flores',          valor: 100 },
-    { id: 'placa',      label: 'Placa PVC adesivado',        valor: 60  },
-  ],
+let ITENS_REPOSICAO = {
+  BASICO: [],
+  LUXO: []
 };
+
+// ─── Inicializar itens de reposição ──────────
+function initItensReposicao() {
+  const salvos = Storage.reposicao.getAll();
+  ITENS_REPOSICAO.BASICO = salvos.BASICO || [
+    { id: 'mesa', label: 'Mesa desmontável', valor: 350 },
+    { id: 'painel', label: 'Painel de encaixe', valor: 80 },
+    { id: 'capa', label: 'Capa de tecido / disco PVC', valor: 70 },
+    { id: 'doceiras', label: 'Doceiras (4 unidades)', valor: 100 },
+    { id: 'boleira', label: 'Boleira', valor: 80 },
+    { id: 'vaso', label: 'Vaso', valor: 60 },
+    { id: 'arranjo', label: 'Arranjo de flores', valor: 90 },
+    { id: 'placa', label: 'Placa PVC adesivado', valor: 60 },
+  ];
+  ITENS_REPOSICAO.LUXO = salvos.LUXO || [
+    { id: 'mesa', label: 'Mesa desmontável', valor: 350 },
+    { id: 'painel', label: 'Painel de encaixe', valor: 80 },
+    { id: 'capa', label: 'Capa temática', valor: 70 },
+    { id: 'boleira', label: 'Boleira de cerâmica/metal', valor: 180 },
+    { id: 'vaso', label: 'Vaso de cerâmica/vidro', valor: 180 },
+    { id: 'doceiras', label: 'Suportes de cerâmica', valor: 150 },
+    { id: 'arranjo', label: 'Arranjo de flores', valor: 100 },
+    { id: 'placa', label: 'Placa PVC adesivado', valor: 60 },
+  ];
+}
 
 // ─── Selecionar tipo no Step 1 ───────────────
 function selectTipo(tipo) {
@@ -104,6 +111,9 @@ function validateStep(step) {
 
 // ─── Carregar valores no Step 4 ──────────────
 function carregarValoresStep4() {
+  // Inicializa itens de reposição se necessário
+  initItensReposicao();
+  
   const tipo = contratoTipoSelecionado || 'BASICO';
 
   // Valor total default
@@ -193,7 +203,7 @@ function montarContratoObj() {
   };
 }
 
-// ─── Salvar contrato na API ───────────────────
+// ─── Salvar contrato no localStorage ──────────
 async function salvarContrato() {
   if (!validateStep(2)) return;
 
@@ -204,51 +214,38 @@ async function salvarContrato() {
   if (clienteId) dados.cliente_id = clienteId;
 
   try {
-    let res;
+    let salvo;
     if (contratoEditandoId) {
-      res = await fetch(`tables/contratos/${contratoEditandoId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados),
-      });
+      salvo = Storage.contratos.update(contratoEditandoId, dados);
     } else {
-      res = await fetch('tables/contratos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dados),
-      });
+      salvo = Storage.contratos.create(dados);
+      contratoEditandoId = salvo.id;
     }
 
-    if (res.ok) {
-      const salvo = await res.json();
-      contratoEditandoId = salvo.id;
+    showToast('Contrato salvo com sucesso!', 'success');
+    await loadContratos();
+    updateDashboardStats();
 
-      showToast('Contrato salvo com sucesso!', 'success');
-      await loadContratos();
-      updateDashboardStats();
+    const confirm = await Swal.fire({
+      title: 'Contrato salvo!',
+      html: `<p>O contrato <strong>Nº ${dados.numero}</strong> foi salvo.</p>
+             <p style="margin-top:12px;">Deseja gerar o PDF agora?</p>`,
+      icon: 'success',
+      showCancelButton: true,
+      confirmButtonText: '<i class="fa fa-file-pdf"></i> Gerar PDF',
+      cancelButtonText: 'Ir para contratos',
+      confirmButtonColor: '#1a3a5c',
+    });
 
-      const confirm = await Swal.fire({
-        title: 'Contrato salvo!',
-        html: `<p>O contrato <strong>Nº ${dados.numero}</strong> foi salvo.</p>
-               <p style="margin-top:12px;">Deseja gerar o PDF agora?</p>`,
-        icon: 'success',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fa fa-file-pdf"></i> Gerar PDF',
-        cancelButtonText: 'Ir para contratos',
-        confirmButtonColor: '#1a3a5c',
-      });
-
-      if (confirm.isConfirmed) {
-        gerarPDF();
-      } else {
-        navigate('contratos');
-        resetWizard();
-      }
+    if (confirm.isConfirmed) {
+      gerarPDF();
     } else {
-      showToast('Erro ao salvar contrato.', 'error');
+      navigate('contratos');
+      resetWizard();
     }
   } catch (e) {
-    showToast('Erro de conexão.', 'error');
+    console.error(e);
+    showToast('Erro ao salvar contrato.', 'error');
   }
 }
 
@@ -318,18 +315,18 @@ function gerarHTMLContrato(data = null) {
       </div>
       <div class="cp-party">
         <h4>Locatário(a)</h4>
-        <p><strong>${data.cliente_nome || '—'}</strong></p>
-        ${data.cliente_cpf ? `<p>CPF: ${data.cliente_cpf}</p>` : ''}
-        ${data.cliente_rg  ? `<p>RG: ${data.cliente_rg}</p>` : ''}
-        ${data.cliente_tel ? `<p>📞 ${data.cliente_tel}</p>` : ''}
-        ${data.cliente_endereco ? `<p>📍 ${data.cliente_endereco}${data.cliente_cidade ? ', ' + data.cliente_cidade : ''}${data.cliente_estado ? '/' + data.cliente_estado : ''}</p>` : ''}
+        <p><strong>${escHtml(data.cliente_nome) || '—'}</strong></p>
+        ${data.cliente_cpf ? `<p>CPF: ${escHtml(data.cliente_cpf)}</p>` : ''}
+        ${data.cliente_rg  ? `<p>RG: ${escHtml(data.cliente_rg)}</p>` : ''}
+        ${data.cliente_tel ? `<p>📞 ${escHtml(data.cliente_tel)}</p>` : ''}
+        ${data.cliente_endereco ? `<p>📍 ${escHtml(data.cliente_endereco)}${data.cliente_cidade ? ', ' + escHtml(data.cliente_cidade) : ''}${data.cliente_estado ? '/' + escHtml(data.cliente_estado) : ''}</p>` : ''}
       </div>
     </div>
 
     <p class="cp-clause-title">Cláusula Primeira — Do Objeto</p>
     <p>A Locadora compromete-se a entregar ao(à) Locatário(a) em regime de locação temporária o seguinte conjunto de itens:</p>
     <div class="cp-highlight-box">${itensDescricao}</div>
-    <p>O kit será utilizado no seguinte endereço: <strong>${data.endereco_evento || '—'}</strong></p>
+    <p>O kit será utilizado no seguinte endereço: <strong>${escHtml(data.endereco_evento) || '—'}</strong></p>
 
     <p class="cp-clause-title">Cláusula Segunda — Do Prazo e Logística</p>
     <table class="cp-table">
@@ -349,7 +346,7 @@ function gerarHTMLContrato(data = null) {
       <div class="cp-value-line"><span>Valor Total da Locação:</span><strong>${formatMoeda(data.valor_total)}</strong></div>
       <div class="cp-value-line"><span>Sinal (50% — para confirmar reserva):</span><strong>${formatMoeda(data.valor_sinal)}</strong></div>
       <div class="cp-value-line"><span>Saldo (pagar até a retirada):</span><strong>${formatMoeda(data.valor_sinal)}</strong></div>
-      <div class="cp-value-line" style="border:none;margin-top:8px;"><span>Chave PIX:</span><strong>${data.chave_pix || '—'}</strong></div>
+      <div class="cp-value-line" style="border:none;margin-top:8px;"><span>Chave PIX:</span><strong>${escHtml(data.chave_pix) || '—'}</strong></div>
     </div>
 
     <p class="cp-clause-title">Cláusula Quarta — Das Obrigações do Locatário</p>
@@ -367,7 +364,7 @@ function gerarHTMLContrato(data = null) {
     <table class="cp-table">
       <thead><tr><th>Item</th><th>Valor de Reposição</th></tr></thead>
       <tbody>
-        ${itens.map(i => `<tr><td>${i.label}</td><td>${formatMoeda(i.valor)}</td></tr>`).join('')}
+        ${itens.map(i => `<tr><td>${escHtml(i.label)}</td><td>${formatMoeda(i.valor)}</td></tr>`).join('')}
       </tbody>
     </table>` : ''}
     <p><strong>§ 2º — Danos reversíveis:</strong> o custo de manutenção será avaliado por profissional especializado e deverá ser pago pelo(a) Locatário(a) em até 24 horas após a notificação.</p>
@@ -383,7 +380,7 @@ function gerarHTMLContrato(data = null) {
 
     ${data.observacoes ? `
     <p class="cp-clause-title">Observações</p>
-    <div class="cp-highlight-box">${data.observacoes}</div>` : ''}
+    <div class="cp-highlight-box">${escHtml(data.observacoes)}</div>` : ''}
 
     <p style="margin-top:24px;text-align:center;font-size:13px;">
       Estando justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor.
@@ -400,7 +397,7 @@ function gerarHTMLContrato(data = null) {
       <div class="cp-signature-block">
         ${assinaturaImg}
         <div class="cp-signature-line" style="${assinaturaImg ? 'margin-top:6px' : ''}"></div>
-        <div class="cp-signature-label"><strong>${data.cliente_nome || '—'}</strong><br>Locatário(a)</div>
+        <div class="cp-signature-label"><strong>${escHtml(data.cliente_nome) || '—'}</strong><br>Locatário(a)</div>
       </div>
     </div>
 
@@ -414,9 +411,7 @@ function gerarHTMLContrato(data = null) {
 // ─── Carregar contratos ───────────────────────
 async function loadContratos() {
   try {
-    const res = await fetch('tables/contratos?limit=200&sort=created_at');
-    const json = await res.json();
-    contratosData = json.data || [];
+    contratosData = Storage.contratos.getAll();
     renderContratosTable(contratosData);
     renderRecentContracts();
     updateDashboardStats();
@@ -446,8 +441,8 @@ function renderContratosTable(list) {
 
   tbody.innerHTML = [...list].reverse().map(ct => `
     <tr>
-      <td><strong>${ct.numero || '—'}</strong></td>
-      <td>${ct.cliente_nome || '—'}</td>
+      <td><strong>${escHtml(ct.numero) || '—'}</strong></td>
+      <td>${escHtml(ct.cliente_nome) || '—'}</td>
       <td>${tipoBadge[ct.tipo] || ct.tipo}</td>
       <td>${ct.valor_total ? Number(ct.valor_total).toLocaleString('pt-BR', {style:'currency',currency:'BRL'}) : '—'}</td>
       <td>${ct.data_retirada ? new Date(ct.data_retirada).toLocaleDateString('pt-BR') : '—'}</td>
@@ -482,7 +477,7 @@ function renderRecentContracts() {
   const el = document.getElementById('recentContracts');
   if (!el) return;
 
-  const recent = [...contratosData].reverse().slice(0, 5);
+  const recent = Storage.contratos.getRecent(5);
   if (recent.length === 0) {
     el.innerHTML = `<div class="empty-state"><i class="fa fa-file-contract fa-3x"></i><p>Nenhum contrato gerado ainda.</p></div>`;
     return;
@@ -503,8 +498,8 @@ function renderRecentContracts() {
   el.innerHTML = recent.map(ct => `
     <div class="recent-contract-item">
       <div class="rci-info">
-        <div class="rci-name">${ct.cliente_nome || 'Cliente'}</div>
-        <div class="rci-detail">${tipoBadge[ct.tipo] || ''} Nº ${ct.numero || '—'} · ${ct.valor_total ? Number(ct.valor_total).toLocaleString('pt-BR', {style:'currency',currency:'BRL'}) : '—'}</div>
+        <div class="rci-name">${escHtml(ct.cliente_nome) || 'Cliente'}</div>
+        <div class="rci-detail">${tipoBadge[ct.tipo] || ''} Nº ${escHtml(ct.numero) || '—'} · ${ct.valor_total ? Number(ct.valor_total).toLocaleString('pt-BR', {style:'currency',currency:'BRL'}) : '—'}</div>
       </div>
       ${statusBadge[ct.status] || ''}
     </div>
@@ -547,7 +542,7 @@ async function excluirContrato(id, num) {
   });
 
   if (result.isConfirmed) {
-    await fetch(`tables/contratos/${id}`, { method: 'DELETE' });
+    Storage.contratos.delete(id);
     showToast('Contrato excluído.', 'success');
     await loadContratos();
   }

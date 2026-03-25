@@ -4,8 +4,8 @@
 
 // ─── Configurações globais ─────────────────────
 let appConfig = {
-  pix: '778.802.773-15',
-  telefone: '(85) 98685-3750',
+  pix: '',
+  telefone: '(85) 99999-0000',
   valorBasico: 280,
   valorLuxo: 350,
   enderecoEmpresa: 'Fortaleza - CE',
@@ -83,14 +83,12 @@ function closeSidebarMobile() {
 
 // ─── Dashboard stats ────────────────────────────
 function updateDashboardStats() {
-  const total    = contratosData.length;
-  const assinados = contratosData.filter(c => c.status === 'assinado').length;
-  const pendentes = contratosData.filter(c => c.status === 'rascunho' || c.status === 'enviado').length;
-  const clientes = clientesData.length;
+  const stats = Storage.contratos.getStats();
+  const clientes = Storage.clientes.getAll().length;
 
-  animateCounter('statTotal', total);
-  animateCounter('statAssinados', assinados);
-  animateCounter('statPendentes', pendentes);
+  animateCounter('statTotal', stats.total);
+  animateCounter('statAssinados', stats.assinados);
+  animateCounter('statPendentes', stats.pendentes);
   animateCounter('statClientes', clientes);
 }
 
@@ -110,17 +108,13 @@ function animateCounter(id, target) {
 // ─── Configurações ──────────────────────────────
 async function loadConfiguracoes() {
   try {
-    const res = await fetch('tables/configuracoes?limit=50');
-    const json = await res.json();
-    const cfgs = json.data || [];
-
-    cfgs.forEach(c => {
-      if (c.chave === 'chave_pix')          appConfig.pix = c.valor || '';
-      if (c.chave === 'telefone')            appConfig.telefone = c.valor || '';
-      if (c.chave === 'valor_basico')        appConfig.valorBasico = parseFloat(c.valor) || 280;
-      if (c.chave === 'valor_luxo')          appConfig.valorLuxo = parseFloat(c.valor) || 350;
-      if (c.chave === 'endereco_empresa')    appConfig.enderecoEmpresa = c.valor || '';
-    });
+    const configs = Storage.configs.getAll();
+    
+    appConfig.pix = configs.chave_pix || '';
+    appConfig.telefone = configs.telefone || '(85) 99999-0000';
+    appConfig.valorBasico = parseFloat(configs.valor_basico) || 280;
+    appConfig.valorLuxo = parseFloat(configs.valor_luxo) || 350;
+    appConfig.enderecoEmpresa = configs.endereco_empresa || 'Fortaleza - CE';
   } catch (e) {
     console.error('Erro ao carregar configs:', e);
   }
@@ -137,8 +131,10 @@ function renderConfigPage() {
   if (elVL)  elVL.value  = appConfig.valorLuxo;
 
   // Preços nos cards de tipo
-  document.getElementById('price-BASICO').textContent = Number(appConfig.valorBasico).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-  document.getElementById('price-LUXO').textContent   = Number(appConfig.valorLuxo).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+  const priceB = document.getElementById('price-BASICO');
+  const priceL = document.getElementById('price-LUXO');
+  if (priceB) priceB.textContent = Number(appConfig.valorBasico).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+  if (priceL) priceL.textContent = Number(appConfig.valorLuxo).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 }
 
 async function salvarConfiguracoes() {
@@ -147,35 +143,13 @@ async function salvarConfiguracoes() {
   const novoVB    = parseFloat(document.getElementById('cfg_valor_basico').value);
   const novoVL    = parseFloat(document.getElementById('cfg_valor_luxo').value);
 
-  const updates = [
-    { chave: 'chave_pix',     valor: novoPix },
-    { chave: 'telefone',      valor: novoTel },
-    { chave: 'valor_basico',  valor: String(novoVB || 280) },
-    { chave: 'valor_luxo',    valor: String(novoVL || 350) },
-  ];
-
   try {
-    // Busca configs existentes
-    const res = await fetch('tables/configuracoes?limit=50');
-    const json = await res.json();
-    const existentes = json.data || [];
-
-    for (const upd of updates) {
-      const existing = existentes.find(e => e.chave === upd.chave);
-      if (existing) {
-        await fetch(`tables/configuracoes/${existing.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chave: upd.chave, valor: upd.valor }),
-        });
-      } else {
-        await fetch('tables/configuracoes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chave: upd.chave, valor: upd.valor }),
-        });
-      }
-    }
+    Storage.configs.setMultiple({
+      chave_pix: novoPix,
+      telefone: novoTel,
+      valor_basico: String(novoVB || 280),
+      valor_luxo: String(novoVL || 350)
+    });
 
     appConfig.pix = novoPix;
     appConfig.telefone = novoTel;
@@ -217,46 +191,71 @@ function renderReposicaoConfig() {
   const container = document.getElementById('reposicaoConfigContainer');
   if (!container) return;
 
-  const allItems = [...REPOSICAO_CONFIG_KEYS.BASICO, ...REPOSICAO_CONFIG_KEYS.LUXO];
+  // Carrega valores salvos ou usa defaults
+  const valoresSalvos = Storage.reposicao.getAll();
 
   container.innerHTML = `
     <h4 style="color:var(--primary);margin-bottom:10px;">📦 Pacote BÁSICO</h4>
-    ${REPOSICAO_CONFIG_KEYS.BASICO.map(item => `
+    ${REPOSICAO_CONFIG_KEYS.BASICO.map(item => {
+      const valorSalvo = valoresSalvos.BASICO?.find(i => i.id === item.id)?.valor;
+      const valor = valorSalvo !== undefined ? valorSalvo : item.default;
+      return `
       <div class="reposicao-item">
         <label>${item.label}</label>
         <div class="input-reposicao">
           <span>R$</span>
-          <input type="number" id="${item.id}" value="${item.default}" step="0.01" min="0" />
+          <input type="number" id="${item.id}" data-tipo="BASICO" value="${valor}" step="0.01" min="0" />
         </div>
       </div>
-    `).join('')}
+    `}).join('')}
     <h4 style="color:var(--primary);margin-top:20px;margin-bottom:10px;">👑 Pacote LUXO</h4>
-    ${REPOSICAO_CONFIG_KEYS.LUXO.map(item => `
+    ${REPOSICAO_CONFIG_KEYS.LUXO.map(item => {
+      const valorSalvo = valoresSalvos.LUXO?.find(i => i.id === item.id)?.valor;
+      const valor = valorSalvo !== undefined ? valorSalvo : item.default;
+      return `
       <div class="reposicao-item">
         <label>${item.label}</label>
         <div class="input-reposicao">
           <span>R$</span>
-          <input type="number" id="${item.id}" value="${item.default}" step="0.01" min="0" />
+          <input type="number" id="${item.id}" data-tipo="LUXO" value="${valor}" step="0.01" min="0" />
         </div>
       </div>
-    `).join('')}
+    `}).join('')}
   `;
 }
 
 async function salvarValoresReposicao() {
-  const allItems = [...REPOSICAO_CONFIG_KEYS.BASICO, ...REPOSICAO_CONFIG_KEYS.LUXO];
-  const tipo = contratoTipoSelecionado;
+  const valoresBasico = [];
+  const valoresLuxo = [];
 
-  // Atualiza valores no ITENS_REPOSICAO globalmente
-  REPOSICAO_CONFIG_KEYS.BASICO.forEach((cfgItem, idx) => {
-    const el = document.getElementById(cfgItem.id);
-    if (el) ITENS_REPOSICAO.BASICO[idx].valor = parseFloat(el.value) || cfgItem.default;
+  REPOSICAO_CONFIG_KEYS.BASICO.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (el) {
+      valoresBasico.push({
+        id: item.id,
+        label: item.label,
+        valor: parseFloat(el.value) || item.default
+      });
+    }
   });
 
-  REPOSICAO_CONFIG_KEYS.LUXO.forEach((cfgItem, idx) => {
-    const el = document.getElementById(cfgItem.id);
-    if (el) ITENS_REPOSICAO.LUXO[idx].valor = parseFloat(el.value) || cfgItem.default;
+  REPOSICAO_CONFIG_KEYS.LUXO.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (el) {
+      valoresLuxo.push({
+        id: item.id,
+        label: item.label,
+        valor: parseFloat(el.value) || item.default
+      });
+    }
   });
+
+  Storage.reposicao.set('BASICO', valoresBasico);
+  Storage.reposicao.set('LUXO', valoresLuxo);
+
+  // Atualiza também o ITENS_REPOSICAO global
+  ITENS_REPOSICAO.BASICO = valoresBasico;
+  ITENS_REPOSICAO.LUXO = valoresLuxo;
 
   showToast('Valores de reposição atualizados!', 'success');
 }

@@ -5,12 +5,12 @@
 let clientesData = [];
 let clienteEditId = null;
 
-// ─── Carregar clientes da API ───────────────
+// ─── Carregar clientes do localStorage ─────────
 async function loadClientes() {
   try {
-    const res = await fetch('tables/clientes?limit=200&sort=nome');
-    const json = await res.json();
-    clientesData = json.data || [];
+    clientesData = Storage.clientes.getAll();
+    // Ordena por nome
+    clientesData.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
     renderClientesTable(clientesData);
     renderClientesSelect();
     updateDashboardStats();
@@ -29,10 +29,10 @@ function renderClientesTable(list) {
 
   tbody.innerHTML = list.map(c => `
     <tr>
-      <td><strong>${c.nome}</strong></td>
-      <td>${c.cpf || '—'}</td>
-      <td>${c.telefone || '—'}</td>
-      <td>${c.cidade || '—'}${c.estado ? '/' + c.estado : ''}</td>
+      <td><strong>${escHtml(c.nome)}</strong></td>
+      <td>${escHtml(c.cpf) || '—'}</td>
+      <td>${escHtml(c.telefone) || '—'}</td>
+      <td>${escHtml(c.cidade) || '—'}${c.estado ? '/' + escHtml(c.estado) : ''}</td>
       <td>
         <div style="display:flex;gap:6px;">
           <button class="btn btn-outline btn-sm btn-icon" title="Editar" onclick="editarCliente('${c.id}')">
@@ -55,7 +55,7 @@ function renderClientesSelect() {
   const sel = document.getElementById('selectClienteExistente');
   if (!sel) return;
   sel.innerHTML = '<option value="">— Selecione um cliente —</option>' +
-    clientesData.map(c => `<option value="${c.id}">${c.nome}${c.cpf ? ' — ' + c.cpf : ''}</option>`).join('');
+    clientesData.map(c => `<option value="${c.id}">${escHtml(c.nome)}${c.cpf ? ' — ' + escHtml(c.cpf) : ''}</option>`).join('');
 }
 
 // ─── Filtrar clientes ────────────────────────
@@ -127,31 +127,19 @@ async function salvarCliente() {
   };
 
   try {
-    let res;
     const editId = document.getElementById('m_cliente_id').value;
     if (editId) {
-      res = await fetch(`tables/clientes/${editId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      Storage.clientes.update(editId, payload);
     } else {
-      res = await fetch('tables/clientes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      Storage.clientes.create(payload);
     }
 
-    if (res.ok) {
-      showToast('Cliente salvo com sucesso!', 'success');
-      closeClienteModal();
-      await loadClientes();
-    } else {
-      showToast('Erro ao salvar cliente.', 'error');
-    }
+    showToast('Cliente salvo com sucesso!', 'success');
+    closeClienteModal();
+    await loadClientes();
   } catch (e) {
-    showToast('Erro de conexão.', 'error');
+    console.error(e);
+    showToast('Erro ao salvar cliente.', 'error');
   }
 }
 
@@ -187,7 +175,7 @@ async function confirmarExcluirCliente(id, nome) {
 
   if (result.isConfirmed) {
     try {
-      await fetch(`tables/clientes/${id}`, { method: 'DELETE' });
+      Storage.clientes.delete(id);
       showToast('Cliente excluído.', 'success');
       await loadClientes();
     } catch {
@@ -252,16 +240,20 @@ async function salvarClienteSeNovo() {
   if (!c.nome || !c.telefone) return null;
 
   try {
-    const res = await fetch('tables/clientes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome: c.nome, cpf: c.cpf, rg: c.rg, telefone: c.telefone, email: c.email, endereco: c.endereco, cidade: c.cidade, estado: c.estado }),
+    const novo = Storage.clientes.create({
+      nome: c.nome,
+      cpf: c.cpf,
+      rg: c.rg,
+      telefone: c.telefone,
+      email: c.email,
+      endereco: c.endereco,
+      cidade: c.cidade,
+      estado: c.estado
     });
-    if (res.ok) {
-      const novo = await res.json();
-      await loadClientes();
-      return novo.id;
-    }
-  } catch {}
+    await loadClientes();
+    return novo.id;
+  } catch (e) {
+    console.error(e);
+  }
   return null;
 }
