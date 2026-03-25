@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Glipearte — Gerador de Contratos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <span class="logo-balloons">🎈</span>
+    </div>
+    <div>
+      <div class="logo-name">Glipearte</div>
+      <div class="logo-sub">pegue e monte</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+      <i class="fa fa-home"></i> Dashboard
+    </a>
+    <a class="nav-item" data-page="clientes" onclick="navigate('clientes')">
+      <i class="fa fa-users"></i> Clientes
+    </a>
+    <a class="nav-item" data-page="contratos" onclick="navigate('contratos')">
+      <i class="fa fa-file-contract"></i> Contratos
+    </a>
+    <a class="nav-item" data-page="novo-contrato" onclick="navigate('novo-contrato')">
+      <i class="fa fa-plus-circle"></i> Novo Contrato
+    </a>
+    <a class="nav-item" data-page="configuracoes" onclick="navigate('configuracoes')">
+      <i class="fa fa-cog"></i> Configurações
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <span>Festas incríveis começam aqui ✨</span>
+  </div>
+</div>
+
+<!-- ===== TOPBAR ===== -->
+<div class="topbar">
+  <button class="menu-toggle" onclick="toggleSidebar()"><i class="fa fa-bars"></i></button>
+  <h1 class="page-title" id="pageTitle">Dashboard</h1>
+  <div class="topbar-actions">
+    <button class="btn btn-primary btn-sm" onclick="navigate('novo-contrato')">
+      <i class="fa fa-plus"></i> Novo Contrato
+    </button>
+  </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="main-content" id="mainContent">
+
+  <!-- PAGE: DASHBOARD -->
+  <section id="page-dashboard" class="page active">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon bg-primary"><i class="fa fa-file-contract"></i></div>
+        <div class="stat-info">
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-label">Total de Contratos</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-success"><i class="fa fa-check-circle"></i></div>
+        <div class="stat-info">
+          <div class="stat-value" id="statAssinados">0</div>
+          <div class="stat-label">Assinados</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-warning"><i class="fa fa-clock"></i></div>
+        <div class="stat-info">
+          <div class="stat-value" id="statPendentes">0</div>
+          <div class="stat-label">Pendentes</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon bg-info"><i class="fa fa-users"></i></div>
+        <div class="stat-info">
+          <div class="stat-value" id="statClientes">0</div>
+          <div class="stat-label">Clientes Cadastrados</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fa fa-history"></i> Contratos Recentes</h2>
+        </div>
+        <div class="card-body">
+          <div id="recentContracts">
+            <div class="empty-state"><i class="fa fa-file-contract fa-3x"></i><p>Nenhum contrato gerado ainda.</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2><i class="fa fa-star"></i> Ações Rápidas</h2></div>
+        <div class="card-body quick-actions">
+          <button class="quick-action-btn" onclick="navigate('novo-contrato'); setContratoTipo('BASICO')">
+            <i class="fa fa-box"></i>
+            <span>Novo Contrato<br><strong>BÁSICO</strong></span>
+          </button>
+          <button class="quick-action-btn luxury" onclick="navigate('novo-contrato'); setContratoTipo('LUXO')">
+            <i class="fa fa-crown"></i>
+            <span>Novo Contrato<br><strong>LUXO</strong></span>
+          </button>
+          <button class="quick-action-btn secondary" onclick="navigate('clientes')">
+            <i class="fa fa-user-plus"></i>
+            <span>Cadastrar<br><strong>Cliente</strong></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE: CLIENTES -->
+  <section id="page-clientes" class="page">
+    <div class="page-actions">
+      <button class="btn btn-primary" onclick="openClienteModal()">
+        <i class="fa fa-plus"></i> Novo Cliente
+      </button>
+      <div class="search-box">
+        <i class="fa fa-search"></i>
+        <input type="text" id="searchCliente" placeholder="Buscar cliente..." oninput="filterClientes()" />
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body p0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>CPF</th>
+              <th>Telefone</th>
+              <th>Cidade</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="clientesTableBody">
+            <tr><td colspan="5" class="empty-row"><i class="fa fa-users"></i> Nenhum cliente cadastrado.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE: CONTRATOS -->
+  <section id="page-contratos" class="page">
+    <div class="page-actions">
+      <button class="btn btn-primary" onclick="navigate('novo-contrato')">
+        <i class="fa fa-plus"></i> Novo Contrato
+      </button>
+      <div class="search-box">
+        <i class="fa fa-search"></i>
+        <input type="text" id="searchContrato" placeholder="Buscar contrato..." oninput="filterContratos()" />
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body p0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Cliente</th>
+              <th>Tipo</th>
+              <th>Valor</th>
+              <th>Retirada</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="contratosTableBody">
+            <tr><td colspan="7" class="empty-row"><i class="fa fa-file-contract"></i> Nenhum contrato gerado.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE: NOVO CONTRATO -->
+  <section id="page-novo-contrato" class="page">
+    <div class="form-wizard">
+      <!-- Step indicators -->
+      <div class="wizard-steps">
+        <div class="wizard-step active" id="step-ind-1">
+          <div class="step-circle">1</div>
+          <div class="step-label">Tipo</div>
+        </div>
+        <div class="wizard-divider"></div>
+        <div class="wizard-step" id="step-ind-2">
+          <div class="step-circle">2</div>
+          <div class="step-label">Cliente</div>
+        </div>
+        <div class="wizard-divider"></div>
+        <div class="wizard-step" id="step-ind-3">
+          <div class="step-circle">3</div>
+          <div class="step-label">Detalhes</div>
+        </div>
+        <div class="wizard-divider"></div>
+        <div class="wizard-step" id="step-ind-4">
+          <div class="step-circle">4</div>
+          <div class="step-label">Valores</div>
+        </div>
+        <div class="wizard-divider"></div>
+        <div class="wizard-step" id="step-ind-5">
+          <div class="step-circle">5</div>
+          <div class="step-label">Revisão</div>
+        </div>
+      </div>
+
+      <!-- STEP 1: Tipo -->
+      <div class="wizard-content" id="step-1">
+        <h2 class="step-title">Selecione o Tipo de Contrato</h2>
+        <div class="contract-type-grid">
+          <div class="contract-type-card" id="card-BASICO" onclick="selectTipo('BASICO')">
+            <div class="contract-type-icon">📦</div>
+            <h3>Pocket Table BÁSICO</h3>
+            <p>Kit completo para festas com decoração temática</p>
+            <ul class="item-list">
+              <li><i class="fa fa-check"></i> Mesa desmontável</li>
+              <li><i class="fa fa-check"></i> Painel de encaixe</li>
+              <li><i class="fa fa-check"></i> Capa temática</li>
+              <li><i class="fa fa-check"></i> 4 Doceiras</li>
+              <li><i class="fa fa-check"></i> Boleira</li>
+              <li><i class="fa fa-check"></i> Vaso c/ arranjo</li>
+              <li><i class="fa fa-check"></i> Placa PVC personalizada</li>
+            </ul>
+            <div class="contract-type-price" id="price-BASICO">R$ 280,00</div>
+          </div>
+          <div class="contract-type-card luxury" id="card-LUXO" onclick="selectTipo('LUXO')">
+            <div class="contract-type-badge">✨ Premium</div>
+            <div class="contract-type-icon">👑</div>
+            <h3>Pocket Table LUXO</h3>
+            <p>Kit premium com suportes de cerâmica e arranjos especiais</p>
+            <ul class="item-list">
+              <li><i class="fa fa-check"></i> Mesa desmontável</li>
+              <li><i class="fa fa-check"></i> Painel c/ capa temática</li>
+              <li><i class="fa fa-check"></i> Suportes de cerâmica</li>
+              <li><i class="fa fa-check"></i> Boleira especial</li>
+              <li><i class="fa fa-check"></i> Vaso c/ arranjo floral</li>
+              <li><i class="fa fa-check"></i> Placa PVC personalizada</li>
+            </ul>
+            <div class="contract-type-price" id="price-LUXO">R$ 350,00</div>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <div></div>
+          <button class="btn btn-primary" onclick="nextStep(2)" id="btnStep1Next" disabled>
+            Próximo <i class="fa fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Cliente -->
+      <div class="wizard-content hidden" id="step-2">
+        <h2 class="step-title">Dados do Cliente</h2>
+        <div class="form-section">
+          <div class="existing-client-section">
+            <label>Selecionar cliente cadastrado (opcional):</label>
+            <div class="client-select-row">
+              <select id="selectClienteExistente" onchange="preencherClienteExistente()">
+                <option value="">— Selecione um cliente —</option>
+              </select>
+              <span class="or-divider">ou</span>
+              <button class="btn btn-outline btn-sm" onclick="limparCliente()">
+                <i class="fa fa-user-plus"></i> Novo Cliente
+              </button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Nome Completo *</label>
+              <input type="text" id="c_nome" placeholder="Nome completo do locatário" required />
+            </div>
+            <div class="form-group">
+              <label>CPF *</label>
+              <input type="text" id="c_cpf" placeholder="000.000.000-00" oninput="maskCPF(this)" />
+            </div>
+            <div class="form-group">
+              <label>RG</label>
+              <input type="text" id="c_rg" placeholder="Número do RG" />
+            </div>
+            <div class="form-group">
+              <label>Telefone / WhatsApp *</label>
+              <input type="text" id="c_telefone" placeholder="(00) 00000-0000" oninput="maskPhone(this)" />
+            </div>
+            <div class="form-group">
+              <label>E-mail</label>
+              <input type="email" id="c_email" placeholder="email@exemplo.com" />
+            </div>
+            <div class="form-group full">
+              <label>Endereço Residencial</label>
+              <input type="text" id="c_endereco" placeholder="Rua, número, bairro" />
+            </div>
+            <div class="form-group">
+              <label>Cidade</label>
+              <input type="text" id="c_cidade" placeholder="Fortaleza" />
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <input type="text" id="c_estado" placeholder="CE" maxlength="2" />
+            </div>
+            <div class="form-group full">
+              <label>
+                <input type="checkbox" id="c_salvar" checked /> Salvar cliente para futuros contratos
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn btn-outline" onclick="prevStep(1)"><i class="fa fa-arrow-left"></i> Anterior</button>
+          <button class="btn btn-primary" onclick="nextStep(3)">Próximo <i class="fa fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Detalhes -->
+      <div class="wizard-content hidden" id="step-3">
+        <h2 class="step-title">Detalhes do Evento e Locação</h2>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Endereço do Local do Evento *</label>
+            <input type="text" id="e_endereco" placeholder="Endereço onde o kit será utilizado" />
+          </div>
+          <div class="form-group">
+            <label>Data e Horário da Retirada *</label>
+            <input type="datetime-local" id="e_retirada" />
+          </div>
+          <div class="form-group">
+            <label>Data e Horário da Devolução *</label>
+            <input type="datetime-local" id="e_devolucao" />
+          </div>
+          <div class="form-group full">
+            <label>Observações</label>
+            <textarea id="e_obs" rows="3" placeholder="Observações adicionais..."></textarea>
+          </div>
+        </div>
+        <div class="wizard-nav">
+          <button class="btn btn-outline" onclick="prevStep(2)"><i class="fa fa-arrow-left"></i> Anterior</button>
+          <button class="btn btn-primary" onclick="nextStep(4)">Próximo <i class="fa fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- STEP 4: Valores -->
+      <div class="wizard-content hidden" id="step-4">
+        <h2 class="step-title">Valores do Contrato</h2>
+        <p class="step-subtitle">Ajuste os valores conforme necessário para reajustes ou personalizações.</p>
+
+        <div class="values-grid">
+          <div class="card value-card">
+            <div class="card-header"><h3><i class="fa fa-dollar-sign"></i> Valor da Locação</h3></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>Valor Total da Locação (R$)</label>
+                <div class="input-prefix">
+                  <span>R$</span>
+                  <input type="number" id="v_total" step="0.01" min="0" oninput="calcularSinal()" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Sinal (50% para reserva) — R$</label>
+                <div class="input-prefix readonly">
+                  <span>R$</span>
+                  <input type="number" id="v_sinal" readonly />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Chave PIX para Pagamento</label>
+                <input type="text" id="v_pix" placeholder="Chave PIX" />
+              </div>
+            </div>
+          </div>
+
+          <div class="card value-card">
+            <div class="card-header">
+              <h3><i class="fa fa-exclamation-triangle"></i> Valores de Reposição</h3>
+              <span class="badge">Editáveis para Reajuste</span>
+            </div>
+            <div class="card-body" id="reposicaoContainer">
+              <!-- Preenchido via JS -->
+            </div>
+          </div>
+        </div>
+
+        <div class="wizard-nav">
+          <button class="btn btn-outline" onclick="prevStep(3)"><i class="fa fa-arrow-left"></i> Anterior</button>
+          <button class="btn btn-primary" onclick="nextStep(5)">Revisar Contrato <i class="fa fa-arrow-right"></i></button>
+        </div>
+      </div>
+
+      <!-- STEP 5: Revisão -->
+      <div class="wizard-content hidden" id="step-5">
+        <h2 class="step-title">Revisão e Geração do Contrato</h2>
+
+        <div class="review-actions">
+          <button class="btn btn-primary" onclick="gerarPDF()">
+            <i class="fa fa-file-pdf"></i> Gerar PDF
+          </button>
+          <button class="btn btn-success" onclick="salvarContrato()">
+            <i class="fa fa-save"></i> Salvar Contrato
+          </button>
+          <button class="btn btn-outline" onclick="abrirAssinaturaModal()">
+            <i class="fa fa-pen-nib"></i> Assinatura Digital
+          </button>
+        </div>
+
+        <!-- Contract Preview -->
+        <div class="contract-preview-container">
+          <div id="contratoPreview" class="contract-preview">
+            <!-- Gerado via JS -->
+          </div>
+        </div>
+
+        <div class="wizard-nav">
+          <button class="btn btn-outline" onclick="prevStep(4)"><i class="fa fa-arrow-left"></i> Anterior</button>
+          <button class="btn btn-success" onclick="salvarContrato()">
+            <i class="fa fa-check"></i> Finalizar e Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE: CONFIGURAÇÕES -->
+  <section id="page-configuracoes" class="page">
+    <div class="card">
+      <div class="card-header"><h2><i class="fa fa-cog"></i> Configurações da Empresa</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Chave PIX Padrão</label>
+            <input type="text" id="cfg_pix" placeholder="Chave PIX" />
+          </div>
+          <div class="form-group">
+            <label>Telefone</label>
+            <input type="text" id="cfg_tel" placeholder="(85) 00000-0000" />
+          </div>
+          <div class="form-group">
+            <label>Valor Padrão — Básico (R$)</label>
+            <input type="number" id="cfg_valor_basico" step="0.01" value="280" />
+          </div>
+          <div class="form-group">
+            <label>Valor Padrão — Luxo (R$)</label>
+            <input type="number" id="cfg_valor_luxo" step="0.01" value="350" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="salvarConfiguracoes()">
+          <i class="fa fa-save"></i> Salvar Configurações
+        </button>
+      </div>
+    </div>
+
+    <div class="card mt20">
+      <div class="card-header"><h2><i class="fa fa-table"></i> Valores de Reposição Padrão</h2></div>
+      <div class="card-body">
+        <p class="hint">Estes valores são aplicados por padrão ao gerar novos contratos. Você pode ajustar individualmente em cada contrato.</p>
+        <div id="reposicaoConfigContainer"></div>
+        <button class="btn btn-primary mt10" onclick="salvarValoresReposicao()">
+          <i class="fa fa-save"></i> Salvar Valores
+        </button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== MODAL: CLIENTE ===== -->
+<div class="modal-overlay hidden" id="modalCliente">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalClienteTitle">Novo Cliente</h2>
+      <button onclick="closeClienteModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <input type="hidden" id="m_cliente_id" />
+        <div class="form-group full">
+          <label>Nome Completo *</label>
+          <input type="text" id="m_nome" placeholder="Nome completo" />
+        </div>
+        <div class="form-group">
+          <label>CPF *</label>
+          <input type="text" id="m_cpf" placeholder="000.000.000-00" oninput="maskCPF(this)" />
+        </div>
+        <div class="form-group">
+          <label>RG</label>
+          <input type="text" id="m_rg" placeholder="Número do RG" />
+        </div>
+        <div class="form-group">
+          <label>Telefone *</label>
+          <input type="text" id="m_telefone" placeholder="(00) 00000-0000" oninput="maskPhone(this)" />
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="m_email" placeholder="email@exemplo.com" />
+        </div>
+        <div class="form-group full">
+          <label>Endereço</label>
+          <input type="text" id="m_endereco" placeholder="Rua, número, bairro" />
+        </div>
+        <div class="form-group">
+          <label>Cidade</label>
+          <input type="text" id="m_cidade" placeholder="Fortaleza" />
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <input type="text" id="m_estado" placeholder="CE" maxlength="2" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeClienteModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarCliente()">
+        <i class="fa fa-save"></i> Salvar Cliente
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: ASSINATURA DIGITAL ===== -->
+<div class="modal-overlay hidden" id="modalAssinatura">
+  <div class="modal modal-large">
+    <div class="modal-header">
+      <h2><i class="fa fa-pen-nib"></i> Assinatura Digital do Locatário</h2>
+      <button onclick="closeAssinaturaModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p class="hint">Use o mouse ou toque na tela para assinar no campo abaixo:</p>
+      <div class="signature-wrapper">
+        <canvas id="signatureCanvas" width="700" height="200"></canvas>
+      </div>
+      <div class="signature-actions">
+        <button class="btn btn-outline btn-sm" onclick="limparAssinatura()">
+          <i class="fa fa-eraser"></i> Limpar
+        </button>
+        <span class="hint">Assine dentro do retângulo acima</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeAssinaturaModal()">Cancelar</button>
+      <button class="btn btn-success" onclick="confirmarAssinatura()">
+        <i class="fa fa-check"></i> Confirmar Assinatura
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: VISUALIZAR CONTRATO ===== -->
+<div class="modal-overlay hidden" id="modalVisualizarContrato">
+  <div class="modal modal-fullscreen">
+    <div class="modal-header">
+      <h2><i class="fa fa-file-contract"></i> Visualizar Contrato</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-primary btn-sm" onclick="gerarPDFModal()"><i class="fa fa-file-pdf"></i> PDF</button>
+        <button onclick="closeVisualizarModal()"><i class="fa fa-times"></i></button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="contratoModalContent" class="contract-preview"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar-overlay hidden" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<script src="js/app.js"></script>
+<script src="js/contrato.js"></script>
+<script src="js/clientes.js"></script>
+<script src="js/pdf.js"></script>
+</body>
+</html>
