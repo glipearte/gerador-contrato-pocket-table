@@ -295,7 +295,7 @@ function gerarHTMLContrato(data = null) {
   return `
     <div class="cp-header">
       <div class="cp-logo-wrapper">
-        <div class="cp-logo-circle">🎈</div>
+        <div class="cp-logo-circle">G</div>
         <div>
           <div class="cp-company-name">Glipearte</div>
           <div class="cp-company-sub">Pegue e Monte</div>
@@ -311,7 +311,7 @@ function gerarHTMLContrato(data = null) {
         <h4>Locadora</h4>
         <p><strong>Glipearte Pegue e Monte</strong></p>
         <p>📍 Fortaleza - CE</p>
-        <p>📞 ${appConfig.telefone || '(85) 99999-0000'}</p>
+        <p>📞 ${appConfig.telefone || '(85) 98685-3750'}</p>
       </div>
       <div class="cp-party">
         <h4>Locatário(a)</h4>
