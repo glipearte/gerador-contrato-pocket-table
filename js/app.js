@@ -110,8 +110,8 @@ async function loadConfiguracoes() {
   try {
     const configs = Storage.configs.getAll();
     
-    appConfig.pix = configs.chave_pix || '';
-    appConfig.telefone = configs.telefone || '(85) 99999-0000';
+    appConfig.pix = configs.chave_pix || '778.802.773-15';
+    appConfig.telefone = configs.telefone || '(85) 98685-3750';
     appConfig.valorBasico = parseFloat(configs.valor_basico) || 280;
     appConfig.valorLuxo = parseFloat(configs.valor_luxo) || 350;
     appConfig.enderecoEmpresa = configs.endereco_empresa || 'Fortaleza - CE';
